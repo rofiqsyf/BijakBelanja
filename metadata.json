@@ -1,0 +1,6 @@
+{
+  "name": "BijakBelanja",
+  "description": "An AI-powered anti-impulsive spending assistant for Gen Z, featuring real-time financial shielding, budget tracking, and a cooling-off 'Time Capsule' for wiser consumption.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

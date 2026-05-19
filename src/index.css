@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-surface: #f8fafc;
+  --color-surface-container: #ffffff;
+  --color-surface-glass: rgba(0, 0, 0, 0.03);
+  --color-border-glass: rgba(0, 0, 0, 0.05);
+  
+  --color-neon-indigo: #4f46e5;
+  --color-neon-purple: #9333ea;
+  --color-neon-red: #dc2626;
+  --color-neon-emerald: #059669;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased transition-colors duration-500;
+  }
+}
+
+.dark {
+  --color-surface: #050505;
+  --color-surface-container: #0a0a0a;
+  --color-surface-glass: rgba(255, 255, 255, 0.03);
+  --color-border-glass: rgba(255, 255, 255, 0.05);
+  --color-neon-indigo: #6366f1;
+  --color-neon-purple: #a855f7;
+  --color-neon-red: #ef4444;
+  --color-neon-emerald: #10b981;
+}
+
+.dark body {
+  @apply bg-surface text-slate-300;
+  background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 100%);
+}
+
+.glass-card {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-glass);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px) rotate(-1deg); }
+  75% { transform: translateX(5px) rotate(1deg); }
+}
+
+.shake {
+  animation: shake 0.2s ease-in-out infinite;
+}
+
