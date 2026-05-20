@@ -11,7 +11,7 @@ export const BottomNav = () => {
   const tabs = [
     { id: 'DASHBOARD', icon: Icons.LayoutDashboard, label: 'Beranda' },
     { id: 'SCAN', icon: Icons.ScanLine, label: 'Pindai' },
-    { id: 'CAPSULE', icon: Icons.TimerReset, label: 'Pendingin' },
+    { id: 'CAPSULE', icon: Icons.TimerReset, label: 'Capsule' },
     { id: 'VAULT', icon: Icons.Wallet, label: 'Brankas' },
   ];
 

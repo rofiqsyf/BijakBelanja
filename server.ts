@@ -44,6 +44,15 @@ async function startServer() {
     res.json({ success: true, transactions: db.transactions });
   });
 
+  app.post("/api/transactions/bulk", (req, res) => {
+    const db = readDB();
+    if (Array.isArray(req.body)) {
+      db.transactions.push(...req.body);
+      writeDB(db);
+    }
+    res.json({ success: true, transactions: db.transactions });
+  });
+
   app.delete("/api/transactions/:id", (req, res) => {
     const db = readDB();
     db.transactions = db.transactions.filter((t: any) => t.id !== req.params.id);

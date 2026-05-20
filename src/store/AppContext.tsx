@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export type AppView = 'LOGIN' | 'REGISTER' | 'ONBOARDING' | 'DASHBOARD' | 'SCAN' | 'ANALYSIS' | 'CAPSULE' | 'VAULT' | 'PROFILE' | 'AILOG';
+export type AppView = 'LOGIN' | 'REGISTER' | 'ONBOARDING' | 'DASHBOARD' | 'SCAN' | 'ANALYSIS' | 'CAPSULE' | 'VAULT' | 'PROFILE' | 'AILOG' | 'HISTORY';
 
 export interface Transaction {
   id: string;
   name: string;
   amount: number;
   type: 'WANT' | 'NEED';
-  status: 'SPENT' | 'SAVED' | 'VAULTED' | 'DICHECKOUT' | 'BATAL';
+  status: 'SPENT' | 'SAVED' | 'VAULTED' | 'DICHECKOUT' | 'BATAL' | 'DISIMPAN';
   date: string;
   image?: string;
-  capsuleEndTime?: number;
+  capsuleEndTime?: string;
+  capsuleReason?: string;
 }
 
 export interface Settings {
@@ -21,15 +22,19 @@ export interface Settings {
   expenses: number;
   bills: number;
   darkMode: boolean;
+  theme?: 'default' | 'cyberpunk' | 'minimalist';
+  securityLevel?: number;
+  neuralPreference?: 'Biasa' | 'Sarkastis' | 'Kejam' | 'Supportif';
   profilePic: string;
   targetName: string;
   targetPrice: number;
+  scanDates?: string[];
 }
 
 interface AppState {
   transactions: Transaction[];
   settings: Settings;
-  activeScan: { fileUrl: string; name: string; price: number; regretScore: number; answer90Days?: 'Pasti' | 'Mungkin' | 'Tidak' | null } | null;
+  activeScan: { fileUrl: string; name: string; price: number; regretScore: number; answer90Days?: 'Pasti' | 'Mungkin' | 'Tidak' | null; capsuleDuration?: number; capsuleReason?: string; } | null;
 }
 
 interface AppContextType {
@@ -38,7 +43,11 @@ interface AppContextType {
   setView: (v: AppView) => void;
   updateSettings: (s: Partial<Settings>) => Promise<void>;
   addTransaction: (t: Omit<Transaction, 'id' | 'date'>) => Promise<void>;
+  updateTransaction: (id: string, t: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  bulkDeleteTransactions: (ids: string[]) => Promise<void>;
+  bulkUpdateTransactions: (ids: string[], t: Partial<Transaction>) => Promise<void>;
+  bulkAddTransactions: (txs: Omit<Transaction, 'id' | 'date'>[]) => Promise<void>;
   setActiveScan: (scan: AppState['activeScan']) => void;
   resetApp: () => void;
   isLoading: boolean;
@@ -70,24 +79,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync dark mode class
   useEffect(() => {
+    // Apply styling to root element
     if (state.settings.darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [state.settings.darkMode]);
+
+    // Apply theme
+    document.documentElement.classList.remove('theme-cyberpunk', 'theme-minimalist');
+    if (state.settings.theme === 'cyberpunk') document.documentElement.classList.add('theme-cyberpunk');
+    if (state.settings.theme === 'minimalist') document.documentElement.classList.add('theme-minimalist');
+  }, [state.settings.darkMode, state.settings.theme]);
 
   const loadData = async () => {
     try {
-      const res = await fetch('/api/data');
-      if (res.ok) {
-        const data = await res.json();
-        setState(prev => ({
-          ...prev,
-          transactions: data.transactions || [],
-          settings: { ...defaultSettings, ...(data.settings || {}) }
-        }));
-      }
+      const resetData = { users: [], transactions: [], settings: {} };
+      await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resetData)
+      });
+      setState(prev => ({
+        ...prev,
+        transactions: [],
+        settings: defaultSettings,
+        activeScan: null
+      }));
+      setViewState('LOGIN');
     } catch (e) {
       console.error(e);
     } finally {
@@ -137,11 +156,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    setState(prev => ({
+      ...prev,
+      transactions: prev.transactions.map(tx => tx.id === id ? { ...tx, ...updates } : tx)
+    }));
+    try {
+      await fetch(`/api/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const deleteTransaction = async (id: string) => {
     const newTxList = state.transactions.filter(x => x.id !== id);
     setState(prev => ({ ...prev, transactions: newTxList }));
     try {
       await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const bulkDeleteTransactions = async (ids: string[]) => {
+    const newTxList = state.transactions.filter(x => !ids.includes(x.id));
+    setState(prev => ({ ...prev, transactions: newTxList }));
+    try {
+      // In a real app we'd probably have a bulk api or Promise.all
+      await Promise.all(ids.map(id => fetch(`/api/transactions/${id}`, { method: 'DELETE' })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const bulkUpdateTransactions = async (ids: string[], updates: Partial<Transaction>) => {
+    setState(prev => ({
+      ...prev,
+      transactions: prev.transactions.map(tx => ids.includes(tx.id) ? { ...tx, ...updates } : tx)
+    }));
+    try {
+      await Promise.all(ids.map(id => fetch(`/api/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const bulkAddTransactions = async (txs: Omit<Transaction, 'id' | 'date'>[]) => {
+    const newTxs: Transaction[] = txs.map(tx => ({
+      ...tx,
+      id: crypto.randomUUID(),
+      date: new Date().toISOString()
+    }));
+    
+    setState(prev => ({
+      ...prev,
+      transactions: [...newTxs, ...prev.transactions]
+    }));
+    
+    try {
+      await fetch('/api/transactions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTxs)
+      });
     } catch (e) {
       console.error(e);
     }
@@ -167,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <AppContext.Provider value={{ state, view, setView, updateSettings, addTransaction, deleteTransaction, setActiveScan, resetApp, isLoading }}>
+    <AppContext.Provider value={{ state, view, setView, updateSettings, addTransaction, updateTransaction, deleteTransaction, bulkDeleteTransactions, bulkUpdateTransactions, bulkAddTransactions, setActiveScan, resetApp, isLoading }}>
       {children}
     </AppContext.Provider>
   );

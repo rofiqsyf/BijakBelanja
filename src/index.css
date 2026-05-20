@@ -38,6 +38,26 @@
   background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 100%);
 }
 
+.theme-cyberpunk.dark {
+  --color-neon-indigo: #0ff;
+  --color-neon-purple: #f0f;
+  --color-neon-red: #f00;
+  --color-neon-emerald: #0f0;
+}
+.theme-cyberpunk.dark body {
+  background: radial-gradient(circle at 50% 0%, #110022 0%, #000000 100%);
+}
+
+.theme-minimalist.dark {
+  --color-neon-indigo: #888;
+  --color-neon-purple: #999;
+  --color-neon-red: #666;
+  --color-neon-emerald: #777;
+}
+.theme-minimalist.dark body {
+  background: #111;
+}
+
 .glass-card {
   background: var(--color-surface-glass);
   backdrop-filter: blur(20px);
@@ -52,5 +72,10 @@
 
 .shake {
   animation: shake 0.2s ease-in-out infinite;
+}
+
+/* History selects styling fix */
+option {
+  @apply bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200;
 }
 

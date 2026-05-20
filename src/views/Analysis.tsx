@@ -8,6 +8,9 @@ export const AnalysisView = () => {
   const { setView, state, addTransaction, setActiveScan } = useAppContext();
   const { activeScan, settings, transactions } = state;
   const [modalOpen, setModalOpen] = useState(false);
+  const [isConfiguringCapsule, setIsConfiguringCapsule] = useState(false);
+  const [capsuleDuration, setCapsuleDuration] = useState(48);
+  const [capsuleReason, setCapsuleReason] = useState("");
 
   if (!activeScan) return null;
 
@@ -122,37 +125,91 @@ export const AnalysisView = () => {
           </div>
 
           <div className="space-y-4 pt-4">
-            <NeonButton 
-              variant="secondary" 
-              icon={Icons.Hourglass} 
-              onClick={() => setView('CAPSULE')}
-              className="py-4 h-auto text-xs uppercase tracking-[0.2em] font-black italic"
-            >
-              MULAI PENDINGINAN (48 JAM)
-            </NeonButton>
-            
-            {isRed ? (
-              <button 
-                onClick={() => {
-                  const btn = document.getElementById('buy-anyway');
-                  btn?.classList.add('shake', 'bg-neon-red/10');
-                  setTimeout(() => {
-                    btn?.classList.remove('shake', 'bg-neon-red/10');
-                    setModalOpen(true);
-                  }, 500);
-                }}
-                id="buy-anyway"
-                className="w-full h-14 rounded-2xl border border-neon-red/30 text-neon-red font-black text-[10px] uppercase tracking-[0.4em] hover:bg-neon-red/10 transition-all italic tracking-widest"
-              >
-                TETAP BELI (BAHAYA)
-              </button>
+            {isConfiguringCapsule ? (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 border border-neon-purple/30 bg-neon-purple/5 p-4 rounded-2xl">
+                <h4 className="text-sm font-black text-neon-purple italic uppercase tracking-widest text-center mb-4">Pengaturan Kapsul Waktu</h4>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Durasi Penundaan</label>
+                  <select 
+                    value={capsuleDuration}
+                    onChange={(e) => setCapsuleDuration(Number(e.target.value))}
+                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-neon-purple transition-colors"
+                  >
+                    <option value={24}>24 Jam (Penundaan Biasa)</option>
+                    <option value={48}>48 Jam (Standar AI)</option>
+                    <option value={168}>7 Hari (Impulse Kuat)</option>
+                    <option value={720}>30 Hari (Makan Ruang)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Mengapa kamu ingin ini?</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Karena lucu..."
+                    value={capsuleReason}
+                    onChange={(e) => setCapsuleReason(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-neon-purple transition-colors"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setIsConfiguringCapsule(false)} className="flex-1 py-3 border border-slate-300 dark:border-white/10 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">Batal</button>
+                  <button 
+                    onClick={async () => {
+                      const endTime = new Date(Date.now() + capsuleDuration * 3600 * 1000).toISOString();
+                      await addTransaction({
+                        name: activeScan.name,
+                        amount: activeScan.price,
+                        type: 'WANT',
+                        status: 'VAULTED',
+                        image: activeScan.fileUrl,
+                        capsuleEndTime: endTime,
+                        capsuleReason
+                      });
+                      setActiveScan(null);
+                      setView('CAPSULE');
+                    }}
+                    disabled={!capsuleReason.trim()}
+                    className="flex-1 py-3 bg-neon-purple text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                  >
+                    Mulai Kunci
+                  </button>
+                </div>
+              </motion.div>
             ) : (
-              <button 
-                onClick={handleBuy}
-                className={`w-full h-14 rounded-2xl border font-black text-[10px] uppercase tracking-[0.4em] transition-all italic tracking-widest ${isYellow ? 'border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10' : 'border-neon-emerald/30 text-neon-emerald hover:bg-neon-emerald/10'}`}
-              >
-                BELI SEKARANG (AMAN)
-              </button>
+              <>
+                <NeonButton 
+                  variant="secondary" 
+                  icon={Icons.Hourglass} 
+                  onClick={() => setIsConfiguringCapsule(true)}
+                  className="py-4 h-auto text-xs uppercase tracking-[0.2em] font-black italic"
+                >
+                  MULAI PENUNDAAN ...
+                </NeonButton>
+                
+                {isRed ? (
+                  <button 
+                    onClick={() => {
+                      const btn = document.getElementById('buy-anyway');
+                      btn?.classList.add('shake', 'bg-neon-red/10');
+                      setTimeout(() => {
+                        btn?.classList.remove('shake', 'bg-neon-red/10');
+                        setModalOpen(true);
+                      }, 500);
+                    }}
+                    id="buy-anyway"
+                    className="w-full h-14 rounded-2xl border border-neon-red/30 text-neon-red font-black text-[10px] uppercase tracking-[0.4em] hover:bg-neon-red/10 transition-all italic tracking-widest"
+                  >
+                    TETAP BELI (BAHAYA)
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleBuy}
+                    className={`w-full h-14 rounded-2xl border font-black text-[10px] uppercase tracking-[0.4em] transition-all italic tracking-widest ${isYellow ? 'border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10' : 'border-neon-emerald/30 text-neon-emerald hover:bg-neon-emerald/10'}`}
+                  >
+                    BELI SEKARANG (AMAN)
+                  </button>
+                )}
+              </>
             )}
           </div>
         </GlassCard>

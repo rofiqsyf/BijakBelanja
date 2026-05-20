@@ -15,6 +15,7 @@ import { CapsuleView } from './views/Capsule';
 import { VaultView } from './views/Vault';
 import { ProfileView } from './views/Profile';
 import { AILogView } from './views/AILog';
+import { HistoryView } from './views/History';
 
 export default function App() {
   const { view, isLoading } = useAppContext();
@@ -56,6 +57,7 @@ export default function App() {
           {view === 'VAULT' && <VaultView />}
           {view === 'PROFILE' && <ProfileView />}
           {view === 'AILOG' && <AILogView />}
+          {view === 'HISTORY' && <HistoryView />}
         </motion.div>
       </AnimatePresence>
 

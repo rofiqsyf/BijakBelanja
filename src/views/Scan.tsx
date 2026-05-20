@@ -5,7 +5,7 @@ import { Header, GlassCard, NeonButton } from '../components/ui';
 import { useAppContext } from '../store/AppContext';
 
 export const ScanView = () => {
-  const { setView, setActiveScan, state, addTransaction } = useAppContext();
+  const { setView, setActiveScan, state, addTransaction, updateSettings } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string; price: string; isAnalyzing: boolean } | null>(null);
 
@@ -13,6 +13,15 @@ export const ScanView = () => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
+      
+      // Update scanDates for streak
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const prevScanDates = state.settings.scanDates || [];
+      if (!prevScanDates.includes(dateStr)) {
+         updateSettings({ scanDates: [...prevScanDates, dateStr] }).catch(console.error);
+      }
+
       // Simulate AI loading then prepopulating
       setSelectedImage({ url, name: '', price: '', isAnalyzing: true });
       setTimeout(() => {
@@ -32,15 +41,10 @@ export const ScanView = () => {
     
     const totalSpent = state.transactions.filter(t => t.status === 'SPENT').reduce((acc, t) => acc + t.amount, 0);
     const totalSisa = state.settings.income - state.settings.expenses - state.settings.bills - totalSpent;
-    
-    let regretScore = 0;
-    if (priceNum >= totalSisa) {
-      regretScore = 70 + Math.floor(Math.random() * 30); // 70-100 (Red)
-    } else if (priceNum >= totalSisa * 0.5) {
-      regretScore = 50 + Math.floor(Math.random() * 19); // 50-69 (Yellow)
-    } else {
-      regretScore = 10 + Math.floor(Math.random() * 39); // 10-49 (Green)
-    }
+    const ratio = totalSisa > 0 ? priceNum / totalSisa : (priceNum > 0 ? 1 : 0);
+    const isDanger = ratio >= 0.7;
+    const isWarning = ratio >= 0.5 && !isDanger;
+    const regretScore = Math.min(99, isDanger ? (70 + Math.floor(ratio * 10)) : isWarning ? (50 + Math.floor(ratio * 20)) : (10 + Math.floor(ratio * 40)));
 
     setActiveScan({
       fileUrl: selectedImage.url,
@@ -134,6 +138,41 @@ export const ScanView = () => {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Harga</label>
                   <input type="text" value={formatIDR(selectedImage.price)} onChange={e => setSelectedImage({...selectedImage, price: e.target.value})} className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 mt-1 font-bold text-slate-800 dark:text-white outline-none focus:border-neon-indigo transition-colors text-xl font-black tabular-nums" />
                 </div>
+
+                {(() => {
+                  const priceNum = parseInt(selectedImage.price.replace(/\D/g, ''), 10) || 0;
+                  const totalSpent = state.transactions.filter(t => t.status === 'SPENT').reduce((acc, t) => acc + t.amount, 0);
+                  const totalSisa = state.settings.income - state.settings.expenses - state.settings.bills - totalSpent;
+                  const ratio = totalSisa > 0 ? priceNum / totalSisa : (priceNum > 0 ? 1 : 0);
+                  const isDanger = ratio >= 0.7;
+                  const isWarning = ratio >= 0.5 && !isDanger;
+                  const isSafe = !isDanger && !isWarning;
+                  const regretScore = Math.min(99, isDanger ? (70 + Math.floor(ratio * 10)) : isWarning ? (50 + Math.floor(ratio * 20)) : (10 + Math.floor(ratio * 40)));
+                  
+                  return (
+                    <div className={`mt-6 p-4 rounded-2xl border ${isDanger ? 'bg-neon-red/10 border-neon-red/30' : isWarning ? 'bg-amber-500/10 border-amber-500/30' : 'bg-neon-emerald/10 border-neon-emerald/30'}`}>
+                      <div className="flex items-start gap-4">
+                        <div className={`mt-1 ${isDanger ? 'text-neon-red' : isWarning ? 'text-amber-500' : 'text-neon-emerald'}`}>
+                          <Icons.ShieldAlert size={24} />
+                        </div>
+                        <div>
+                          <h4 className={`text-sm font-black uppercase tracking-widest ${isDanger ? 'text-neon-red' : isWarning ? 'text-amber-500' : 'text-neon-emerald'}`}>
+                            Financial Shield
+                          </h4>
+                          <div className="mt-1 flex items-baseline gap-2">
+                             <span className="text-2xl font-black dark:text-white text-slate-800">{regretScore}/100</span>
+                             <span className="text-xs font-bold text-slate-500">Regret Score</span>
+                          </div>
+                          <p className="text-sm mt-2 text-slate-600 dark:text-slate-300 font-medium">
+                            {isDanger && "Harga sangat tinggi atau melebihi batas aman! Sangat disarankan untuk menggunakan fitur Time Capsule (Pendinginan) agar tidak menyesal."}
+                            {isWarning && "Harga cukup membebani sisa saldomu. Pastikan kamu benar-benar membutuhkannya sebelum melanjutkan."}
+                            {isSafe && "Harga masih dalam batas aman. Silahkan lanjutkan proses."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 
                 <div className="flex gap-3 pt-6">
                   <NeonButton variant="outline" className="flex-1" onClick={() => setSelectedImage(null)}>Batal</NeonButton>
